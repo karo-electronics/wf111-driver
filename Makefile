@@ -19,6 +19,7 @@ ifdef KDIR
 override KDIR := $(realpath $(KDIR))
 endif
 
+EXTRA_CFLAGS += -Wno-date-time
 ifeq ($(ARCH), powerpc)
 EXTRA_CFLAGS += -D__powerpc__
 endif

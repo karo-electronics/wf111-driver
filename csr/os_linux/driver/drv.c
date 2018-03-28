@@ -1267,16 +1267,22 @@ unifi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
         break;
       case UNIFI_BUILD_TYPE:
-        unifi_trace(priv, UDBG2, "UNIFI_BUILD_TYPE userspace=%s\n", build_type_to_string(*(unsigned char*)arg));
+        if (get_user(int_param, (int*)arg))
+        {
+            unifi_error(priv, "UNIFI_BUILD_TYPE: Failed to copy from user\n");
+            r = -EFAULT;
+            goto out;
+        }
+        unifi_trace(priv, UDBG2, "UNIFI_BUILD_TYPE userspace=%s\n", build_type_to_string(int_param));
 #ifndef CSR_SUPPORT_WEXT_AP
-        if (UNIFI_BUILD_AP == *(unsigned char*)arg)
+        if (UNIFI_BUILD_AP == int_param)
         {
             unifi_error(priv, "Userspace has AP support, which is incompatible\n");
         }
 #endif
 
 #ifndef CSR_SUPPORT_WEXT
-        if (UNIFI_BUILD_WEXT == *(unsigned char*)arg)
+        if (UNIFI_BUILD_WEXT == int_param)
         {
             unifi_error(priv, "Userspace has WEXT support, which is incompatible\n");
         }

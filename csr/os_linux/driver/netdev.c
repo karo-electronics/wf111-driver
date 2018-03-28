@@ -2032,7 +2032,11 @@ uf_net_xmit(struct sk_buff *skb, struct net_device *dev)
     	if (!((CSR_WIFI_ROUTER_CTRL_MODE_STA == interfacePriv->interfaceMode) &&
               (priv->wapi_unicast_filter == 1)))
         {
+          #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
+            netif_trans_update(dev);
+          #else
             dev->trans_start = jiffies;
+          #endif  
             /* Should really count tx stats in the UNITDATA.status signal but
              * that doesn't have the length.
              */
@@ -2042,7 +2046,11 @@ uf_net_xmit(struct sk_buff *skb, struct net_device *dev)
 
         }
 #else
-    	dev->trans_start = jiffies;
+         #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
+            netif_trans_update(dev);
+          #else
+            dev->trans_start = jiffies;
+          #endif  
 
         /*
          * Should really count tx stats in the UNITDATA.status signal but
