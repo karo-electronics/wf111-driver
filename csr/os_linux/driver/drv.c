@@ -1267,22 +1267,22 @@ unifi_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
         break;
       case UNIFI_BUILD_TYPE:
-	if (copy_from_user(&uchar_param, (void *)arg, sizeof(uchar_param))) {
-	    unifi_error(priv, "UNIFI_PUTEST: Failed to get the build type\n");
-	    r = -EFAULT;
-	    goto out;
-	}
-	unifi_trace(priv, UDBG2, "UNIFI_BUILD_TYPE userspace=%s\n",
-		build_type_to_string(uchar_param));
+        if (get_user(int_param, (int*)arg))
+        {
+            unifi_error(priv, "UNIFI_BUILD_TYPE: Failed to copy from user\n");
+            r = -EFAULT;
+            goto out;
+        }
+        unifi_trace(priv, UDBG2, "UNIFI_BUILD_TYPE userspace=%s\n", build_type_to_string(int_param));
 #ifndef CSR_SUPPORT_WEXT_AP
-        if (UNIFI_BUILD_AP == uchar_param)
+        if (UNIFI_BUILD_AP == int_param)
         {
             unifi_error(priv, "Userspace has AP support, which is incompatible\n");
         }
 #endif
 
 #ifndef CSR_SUPPORT_WEXT
-        if (UNIFI_BUILD_WEXT == uchar_param)
+        if (UNIFI_BUILD_WEXT == int_param)
         {
             unifi_error(priv, "Userspace has WEXT support, which is incompatible\n");
         }
@@ -2183,8 +2183,9 @@ unifi_load(void)
 {
     int r;
 
-    printk("UniFi SDIO Driver: %s\n",
-            CSR_WIFI_VERSION);
+    printk("UniFi SDIO Driver: %s %s %s\n",
+            CSR_WIFI_VERSION,
+           __DATE__, __TIME__);
 
 #ifdef CSR_SME_USERSPACE
 #ifdef CSR_SUPPORT_WEXT

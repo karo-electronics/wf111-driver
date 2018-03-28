@@ -956,8 +956,8 @@ uf_proc_show(struct seq_file *m, void *v)
         return 0;
     }
 
-    seq_printf(m, "UniFi SDIO Driver: %s\n",
-           CSR_WIFI_VERSION);
+    seq_printf(m, "UniFi SDIO Driver: %s %s %s\n",
+           CSR_WIFI_VERSION, __DATE__, __TIME__);
 #ifdef CSR_SME_USERSPACE
     seq_puts(m, "SME: CSR userspace ");
 #ifdef CSR_SUPPORT_WEXT
