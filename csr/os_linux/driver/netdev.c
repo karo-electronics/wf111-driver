@@ -2357,10 +2357,6 @@ indicate_rx_skb(unifi_priv_t *priv, CsrUint16 ifTag, CsrUint8* dst_a, CsrUint8* 
         netif_rx_ni(skb);
 #endif
 #endif
- 
-    if (dev != NULL) {
-        dev->last_rx = jiffies;
-    }
 
     /* Bump rx stats */
     priv->interfacePriv[ifTag]->stats.rx_packets++;

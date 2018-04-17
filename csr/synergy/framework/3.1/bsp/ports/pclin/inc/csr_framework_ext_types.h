@@ -15,6 +15,7 @@
 #ifdef __KERNEL__
 #include <linux/kthread.h>
 #include <linux/semaphore.h>
+#include <linux/wait.h>
 #else
 #include <pthread.h>
 #endif

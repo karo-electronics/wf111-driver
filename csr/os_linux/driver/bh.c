@@ -13,6 +13,7 @@
  *
  * ---------------------------------------------------------------------------
  */
+#include <linux/sched/types.h>
 #include "csr_wifi_hip_unifi.h"
 #include "unifi_priv.h"
 
