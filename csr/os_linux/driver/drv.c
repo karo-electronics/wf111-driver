@@ -2183,8 +2183,9 @@ unifi_load(void)
 {
     int r;
 
-    printk("UniFi SDIO Driver: %s\n",
-            CSR_WIFI_VERSION);
+    printk("UniFi SDIO Driver: %s %s %s\n",
+            CSR_WIFI_VERSION,
+           __DATE__, __TIME__);
 
 #ifdef CSR_SME_USERSPACE
 #ifdef CSR_SUPPORT_WEXT
