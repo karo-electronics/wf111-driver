@@ -48,6 +48,8 @@
 #include <linux/etherdevice.h>
 #include <linux/mutex.h>
 #include <linux/semaphore.h>
+#include <linux/if_arp.h>
+#include <linux/inetdevice.h>
 
 #include <linux/vmalloc.h>
 #include "csr_wifi_hip_unifi.h"
@@ -117,10 +119,19 @@
 #endif /* UNIFI_NET_NAME */
 #endif /* LINUX_VERSION_CODE */
 
-
 /* Wext handler is suported only if CSR_SUPPORT_WEXT is defined */
 #ifdef CSR_SUPPORT_WEXT
 extern struct iw_handler_def unifi_iw_handler_def;
+
+#define REPLAYED_ARP_INTERVAL 4000
+#define REPLAYED_ARP_ARRAY_SIZE 16
+typedef struct
+{
+    char             address[ETH_ALEN];
+    unsigned int     msTicks;
+} arp_entry_t;
+arp_entry_t replayed_arp_data[REPLAYED_ARP_ARRAY_SIZE];
+
 #endif /* CSR_SUPPORT_WEXT */
 static void check_ba_frame_age_timeout( unifi_priv_t *priv,
                                             netInterface_priv_t *interfacePriv,
@@ -2347,6 +2358,67 @@ indicate_rx_skb(unifi_priv_t *priv, CsrUint16 ifTag, CsrUint8* dst_a, CsrUint8* 
         unifi_trace(priv, UDBG2, "indicate_rx_skb: cmanrTestModeTransmitRate=%d\n", priv->cmanrTestModeTransmitRate);              
     }   
     
+    if(ntohs(skb->protocol) == ETH_P_ARP
+            && priv->interfacePriv[ifTag]->interfaceMode == CSR_WIFI_ROUTER_CTRL_MODE_STA)
+    {
+        struct ethhdr* eth = eth_hdr(skb);
+        struct arphdr* arp = (struct arphdr*)((char*)eth + sizeof(*eth));
+
+        if(memcmp(eth->h_dest, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) == 0 && arp->ar_pln == 4) // IPv4
+        {
+            unsigned char our_address = 0;
+            __be32 arpTarget = *(__be32*)( ((char*)arp) + sizeof(*arp) + 2 * arp->ar_hln + arp->ar_pln);
+
+            struct in_ifaddr* addr = priv->netdev[0]->ip_ptr->ifa_list;
+            while(addr)
+            {
+                if(arpTarget == addr->ifa_address)
+                {
+                    our_address = 1;
+                    break;
+                }
+
+                addr = addr->ifa_next;
+            }
+
+            if(our_address)
+            {
+                unsigned a;
+                unsigned oldest_entry_index = 0;
+
+                for(a = 0; a < REPLAYED_ARP_ARRAY_SIZE; ++a)
+                {
+                    if(memcmp(replayed_arp_data[a].address, eth->h_source, ETH_ALEN) == 0)
+                        break;
+                    else if(replayed_arp_data[a].msTicks < replayed_arp_data[oldest_entry_index].msTicks)
+                        oldest_entry_index = a;
+                }
+
+                if(a >= REPLAYED_ARP_ARRAY_SIZE)
+                {
+                    a = oldest_entry_index;
+                    replayed_arp_data[a].msTicks = jiffies_to_msecs(jiffies);
+                    memcpy(replayed_arp_data[a].address, eth->h_source, ETH_ALEN);
+                }
+                else
+                {
+                    unsigned int msTicks = jiffies_to_msecs(jiffies);
+                    if(msTicks >= replayed_arp_data[a].msTicks + REPLAYED_ARP_INTERVAL)
+                    {
+                        replayed_arp_data[a].msTicks = msTicks;
+                    }
+                    else
+                    {
+                        unifi_net_data_free(priv, &bulkdata->d[0]);
+                        replayed_arp_data[a].msTicks = msTicks;
+                        func_exit();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     /* Pass SKB up the stack */
 #ifdef CSR_WIFI_NAPI_ENABLE
         napi_enqueue(&priv->interfacePriv[ifTag]->napi_skb_list, skb);
